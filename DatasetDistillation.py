@@ -56,9 +56,9 @@ class DatasetDistillation:
         loss = utils.match_loss(grad_sync, grad_real, self.device, "ours")
         metrics['DD_loss'] = loss.item()
         self.opt.zero_grad()
-        # grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
+        grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
         loss.backward()
-        # grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
+        grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
         self.opt.step()
         return metrics
 

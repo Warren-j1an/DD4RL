@@ -299,12 +299,13 @@ class DrQV2Agent:
         return metrics
 
     def critic_grad(self, obs, action, reward, discount, next_obs, step):
-        stddev = utils.schedule(self.stddev_schedule, step)
-        dist = self.actor(next_obs, stddev)
-        next_action = dist.sample(clip=self.stddev_clip)
-        target_Q1, target_Q2 = self.critic_target(next_obs, next_action)
-        target_V = torch.min(target_Q1, target_Q2)
-        target_Q = reward + (discount * target_V)
+        with torch.no_grad():
+            stddev = utils.schedule(self.stddev_schedule, step)
+            dist = self.actor(next_obs, stddev)
+            next_action = dist.sample(clip=self.stddev_clip)
+            target_Q1, target_Q2 = self.critic_target(next_obs, next_action)
+            target_V = torch.min(target_Q1, target_Q2)
+            target_Q = reward + (discount * target_V)
 
         Q1, Q2 = self.critic(obs, action)
         critic_loss = F.mse_loss(Q1, target_Q) + F.mse_loss(Q2, target_Q)
