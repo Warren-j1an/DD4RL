@@ -7,7 +7,7 @@ import cv2
 
 
 class DatasetDistillation:
-    def __init__(self, batch, obs_spec, act_spec, lr, device):
+    def __init__(self, batch, obs_spec, act_spec, discount, lr, device):
         self.batch = batch
         self.obs_spec = obs_spec
         self.act_spec = act_spec
@@ -18,7 +18,7 @@ class DatasetDistillation:
         obs = np.random.rand(self.batch, *self.obs_spec.shape)
         action = np.random.rand(self.batch, *self.act_spec.shape)
         reward = np.random.rand(self.batch, 1)
-        discount = np.random.rand(self.batch, 1)
+        discount = np.full(shape=(self.batch, 1), fill_value=discount)  # np.random.rand(self.batch, 1)
         next_obs = np.random.rand(self.batch, *self.obs_spec.shape)
 
         # TODO: initial fix\orgin
@@ -30,10 +30,10 @@ class DatasetDistillation:
         self.obs = torch.tensor(obs, dtype=torch.float, requires_grad=True, device=self.device)
         self.action = torch.tensor(action, dtype=torch.float, requires_grad=True, device=self.device)
         self.reward = torch.tensor(reward, dtype=torch.float, requires_grad=True, device=self.device)
-        self.discount = torch.tensor(discount, dtype=torch.float, requires_grad=True, device=self.device)
+        self.discount = torch.tensor(discount, dtype=torch.float, requires_grad=False, device=self.device)
         self.next_obs = torch.tensor(next_obs, dtype=torch.float, requires_grad=True, device=self.device)
 
-        self.opt = torch.optim.Adam([self.obs, self.action, self.reward, self.discount, self.next_obs], lr=lr)
+        self.opt = torch.optim.Adam([self.obs, self.action, self.reward, self.next_obs], lr=lr)
 
     def get_data(self):
         return self.obs * 255, self.action, self.reward, self.discount, self.next_obs

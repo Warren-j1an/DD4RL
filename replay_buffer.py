@@ -147,6 +147,7 @@ class ReplayBuffer(IterableDataset):
             traceback.print_exc()
         self._samples_since_last_fetch += 1
         episode = self._sample_episode()
+        ''' using for original drqv2
         # add +1 for the first dummy transition
         idx = np.random.randint(0, episode_len(episode) - self._nstep + 1) + 1
         obs = episode['observation'][idx - 1]
@@ -158,7 +159,14 @@ class ReplayBuffer(IterableDataset):
             step_reward = episode['reward'][idx + i]
             reward += discount * step_reward
             discount *= episode['discount'][idx + i] * self._discount
-        return (obs, action, reward, discount, next_obs)
+        '''
+        idx = np.random.randint(1, episode_len(episode))
+        obs = episode['observation'][idx - 1]
+        action = episode['action'][idx]
+        reward = episode['reward'][idx]
+        discount = np.ones_like(episode['discount'][idx]) * self._discount
+        next_obs = episode['observation'][idx]
+        return obs, action, reward, discount, next_obs
 
     def __iter__(self):
         while True:
