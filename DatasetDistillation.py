@@ -7,19 +7,24 @@ import cv2
 
 
 class DatasetDistillation:
-    def __init__(self, batch, obs_spec, act_spec, discount, lr, device):
+    def __init__(self, batch, obs_spec, act_spec, discount, lr, nstep, device):
         self.batch = batch
         self.obs_spec = obs_spec
         self.act_spec = act_spec
         self.lr = lr
+        self.nstep = nstep
         self.device = device
 
         # synthetic batch, initial random
         obs = np.random.rand(self.batch, *self.obs_spec.shape)
         action = np.random.rand(self.batch, *self.act_spec.shape)
         reward = np.random.rand(self.batch, 1)
-        discount = np.full(shape=(self.batch, 1), fill_value=discount)  # np.random.rand(self.batch, 1)
         next_obs = np.random.rand(self.batch, *self.obs_spec.shape)
+
+        discount_ = 1
+        for _ in range(self.nstep):
+            discount_ *= discount
+        discount = np.full(shape=(self.batch, 1), fill_value=discount_)  # np.random.rand(self.batch, 1)
 
         # TODO: initial fix\orgin
 

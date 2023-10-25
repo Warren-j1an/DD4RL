@@ -65,8 +65,8 @@ class Workspace:
                       specs.Array((1,), np.float32, 'discount'))
 
         self.datasetDistillation = DatasetDistillation.DatasetDistillation(
-            self.cfg.DD.batch, self.train_env.observation_spec(),
-            self.train_env.action_spec(), self.cfg.discount, self.cfg.DD.lr, self.cfg.DD.device)
+            self.cfg.DD.batch, self.train_env.observation_spec(), self.train_env.action_spec(),
+            self.cfg.discount, self.cfg.DD.lr, self.cfg.nstep, self.cfg.DD.device)
 
         self.replay_storage = ReplayBufferStorage(data_specs,
                                                   self.work_dir / 'buffer')
