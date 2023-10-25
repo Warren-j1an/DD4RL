@@ -15,28 +15,28 @@ class DatasetDistillation:
         self.device = device
 
         # synthetic batch, initial random
-        obs = np.random.rand(self.batch, *self.obs_spec.shape)
+        obs = np.random.rand(self.batch + 1, *self.obs_spec.shape)
         action = np.random.rand(self.batch, *self.act_spec.shape)
         reward = np.random.rand(self.batch, 1)
         discount = np.random.rand(self.batch, 1)
-        next_obs = np.random.rand(self.batch, *self.obs_spec.shape)
+        # next_obs = np.random.rand(self.batch, *self.obs_spec.shape)
 
         # TODO: initial fix\orgin
 
         obs = self.convert(obs, self.obs_spec.minimum, self.obs_spec.maximum)
         action = self.convert(action, self.act_spec.minimum, self.act_spec.maximum)
-        next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
+        # next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
 
         self.obs = torch.tensor(obs, dtype=torch.float, requires_grad=True, device=self.device)
         self.action = torch.tensor(action, dtype=torch.float, requires_grad=True, device=self.device)
         self.reward = torch.tensor(reward, dtype=torch.float, requires_grad=True, device=self.device)
         self.discount = torch.tensor(discount, dtype=torch.float, requires_grad=True, device=self.device)
-        self.next_obs = torch.tensor(next_obs, dtype=torch.float, requires_grad=True, device=self.device)
+        # self.next_obs = torch.tensor(next_obs, dtype=torch.float, requires_grad=True, device=self.device)
 
-        self.opt = torch.optim.Adam([self.obs, self.action, self.reward, self.discount, self.next_obs], lr=lr)
+        self.opt = torch.optim.Adam([self.obs, self.action, self.reward, self.discount], lr=lr)
 
     def get_data(self):
-        return self.obs * 255, self.action, self.reward, self.discount, self.next_obs
+        return self.obs[:-1] * 255, self.action, self.reward, self.discount, self.next_obs
 
     def save_img(self):
         img = np.clip(255 * self.obs.cpu().detach().numpy(), 0, 255).astype(np.uint8)
