@@ -16,7 +16,7 @@ class DatasetDistillation:
         self.device = device
 
         # synthetic batch, initial random
-        obs = np.random.rand(self.batch + 1, *self.obs_spec.shape)
+        obs = np.random.rand(self.batch, *self.obs_spec.shape)
         action = np.random.rand(self.batch, *self.act_spec.shape)
         reward = np.random.rand(self.batch, 1)
         next_obs = np.random.rand(self.batch, *self.obs_spec.shape)
