@@ -65,8 +65,8 @@ class Workspace:
                       specs.Array((1,), np.float32, 'discount'))
 
         self.datasetDistillation = DatasetDistillation.DatasetDistillation(
-            self.cfg.DD.batch, self.train_env.observation_spec(),
-            self.train_env.action_spec(), self.cfg.DD.lr, self.cfg.DD.device)
+            self.cfg.DD.batch, self.train_env.observation_spec(), self.train_env.action_spec(),
+            self.cfg.discount, self.cfg.nstep, self.cfg.DD.lr, self.cfg.DD.device)
 
         self.replay_storage = ReplayBufferStorage(data_specs,
                                                   self.work_dir / 'buffer')
@@ -197,10 +197,11 @@ class Workspace:
 
     def save_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
-        keys_to_save = ['agent', 'datasetDistillation', 'timer', '_global_step', '_global_episode']
+        keys_to_save = ['agent', 'timer', '_global_step', '_global_episode']
         payload = {k: self.__dict__[k] for k in keys_to_save}
         with snapshot.open('wb') as f:
             torch.save(payload, f)
+        self.datasetDistillation.save(self.work_dir)
 
     def load_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
@@ -208,6 +209,7 @@ class Workspace:
             payload = torch.load(f)
         for k, v in payload.items():
             self.__dict__[k] = v
+        self.datasetDistillation.load(self.work_dir)
 
 
 @hydra.main(config_path='cfgs', config_name='config')

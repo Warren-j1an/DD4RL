@@ -197,16 +197,14 @@ class Workspace:
 
     def save_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
-        keys_to_save = ['agent', 'datasetDistillation', 'timer', '_global_step', '_global_episode']
+        keys_to_save = ['agent', 'timer', '_global_step', '_global_episode']
         payload = {k: self.__dict__[k] for k in keys_to_save}
         with snapshot.open('wb') as f:
             torch.save(payload, f)
+        self.datasetDistillation.save(self.work_dir)
 
     def load_snapshot(self, snapshot):
-        with snapshot.open('rb') as f:
-            payload = torch.load(f)
-        for k in ['datasetDistillation']:
-            self.__dict__[k] = payload[k]
+        self.datasetDistillation.load(snapshot)
         self.datasetDistillation.save_img()
 
 
@@ -217,8 +215,8 @@ def main(cfg):
     snapshot = root_dir / 'snapshot.pt'
     if snapshot.exists():
         print(f'resuming: {snapshot}')
-        workspace.load_snapshot(snapshot)
-    workspace.train()
+        workspace.load_snapshot(root_dir)
+    # workspace.train()
 
 
 if __name__ == '__main__':

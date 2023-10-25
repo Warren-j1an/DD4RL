@@ -277,9 +277,10 @@ class DrQV2Agent:
 
         return metrics
 
-    def update_datasetDistillation(self, batch, step):
+    def update_datasetDistillation(self, batch_, step):
+        batch = batch_.copy()
         # sync grad
-        obs_sync, action_sync, reward_sync, discount_sync, next_obs_sync = self.datasetDistillation.get_data()
+        obs_sync, action_sync, reward_sync, discount_sync, next_obs_sync = self.datasetDistillation.get_data(batch)
         obs_sync = self.aug(obs_sync.float())
         next_obs_sync = self.aug(next_obs_sync.float())
         obs_sync = self.encoder(obs_sync)
