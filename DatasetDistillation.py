@@ -98,7 +98,7 @@ class DatasetDistillation:
         for i in grad_real:
             i.detach()
         metrics = {}
-        loss = utils.match_loss(grad_sync, grad_real, self.device, "ours")
+        loss = utils.match_loss(grad_sync, grad_real, self.device, "mse")
         metrics['DD_loss'] = loss.item()
         self.opt.zero_grad()
         loss.backward()
@@ -132,6 +132,7 @@ class DatasetDistillation:
         ws.save(os.path.abspath(path) + f'sync_data.xlsx')
 
     def save(self, path):
+        path = str(path)
         np.save(path + "/obs.npy", self.obs)
         np.save(path + "/action.npy", self.action)
         np.save(path + "/reward.npy", self.reward)
