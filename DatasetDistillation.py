@@ -30,7 +30,7 @@ class DatasetDistillation:
 
         obs = self.convert(obs, self.obs_spec.minimum, self.obs_spec.maximum)
         action = self.convert(action, self.act_spec.minimum, self.act_spec.maximum)
-        # next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
+        next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
 
         self.obs = torch.tensor(obs, dtype=torch.float, requires_grad=True, device=self.device)
         self.action = torch.tensor(action, dtype=torch.float, requires_grad=True, device=self.device)
