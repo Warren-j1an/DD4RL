@@ -65,8 +65,8 @@ class Workspace:
                       specs.Array((1,), np.float32, 'discount'))
 
         self.datasetDistillation = DatasetDistillation.DatasetDistillation(
-            self.cfg.DD.batch, self.train_env.observation_spec(),
-            self.train_env.action_spec(), self.cfg.DD.lr, self.cfg.DD.device)
+            self.cfg.DD.batch, self.train_env.observation_spec(), self.train_env.action_spec(),
+            self.cfg.discount, self.cfg.nstep, self.cfg.DD.lr, self.cfg.DD.device)
 
         self.replay_storage = ReplayBufferStorage(data_specs,
                                                   self.work_dir / 'buffer')
@@ -212,10 +212,7 @@ class Workspace:
 def main(cfg):
     root_dir = Path.cwd().parent.parent
     workspace = Workspace(cfg)
-    snapshot = root_dir / 'snapshot.pt'
-    if snapshot.exists():
-        print(f'resuming: {snapshot}')
-        workspace.load_snapshot(root_dir)
+    workspace.load_snapshot(root_dir)
     # workspace.train()
 
 

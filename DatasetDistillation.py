@@ -126,10 +126,11 @@ class DatasetDistillation:
             cv2.imwrite(os.path.abspath(path) + f'/img_next_{i}.png', o_n)
             obs = Image(os.path.abspath(path) + f'/img_{i}.png')
             obs_next = Image(os.path.abspath(path) + f'/img_next_{i}.png')
-            ws.add_image(obs, f'A_{i}')
-            ws[f'B_{i}'] = reward[i]
-            ws.add_image(obs_next, f'C_{i}')
-        ws.save(os.path.abspath(path) + f'sync_data.xlsx')
+            ws.add_image(obs, f'A{i + 1}')
+            ws[f'B{i + 1}'] = reward[i][0]
+            ws.add_image(obs_next, f'C{i + 1}')
+        wb.save(os.path.abspath(path) + f'/sync_data.xlsx')
+        print(pathlib.Path.cwd().parent.parent / 'sync_obs')
 
     def save(self, path):
         path = str(path)
@@ -140,6 +141,7 @@ class DatasetDistillation:
         np.save(path + "/next_obs.npy", self.next_obs)
 
     def load(self, path):
+        path = str(path)
         self.obs = np.load(path + "/obs.npy")
         self.action = np.load(path + "/action.npy")
         self.reward = np.load(path + "/reward.npy")
