@@ -204,11 +204,7 @@ class DrQV2Agent:
         # optimize encoder and critic
         self.encoder_opt.zero_grad(set_to_none=True)
         self.critic_opt.zero_grad(set_to_none=True)
-        grad = [p.grad for p in list(self.encoder.parameters())]
-        grad_ = [p.grad for p in list(self.critic.parameters())]
         critic_loss.backward()
-        grad = [p.grad for p in list(self.encoder.parameters())]
-        grad_ = [p.grad for p in list(self.critic.parameters())]
         self.critic_opt.step()
         self.encoder_opt.step()
 
@@ -228,9 +224,7 @@ class DrQV2Agent:
 
         # optimize actor
         self.actor_opt.zero_grad(set_to_none=True)
-        grad = [p.grad for p in list(self.actor.parameters())]
         actor_loss.backward()
-        grad = [p.grad for p in list(self.actor.parameters())]
         self.actor_opt.step()
 
         if self.use_tb:
@@ -285,16 +279,18 @@ class DrQV2Agent:
         next_obs_sync = self.aug(next_obs_sync.float())
         obs_sync = self.encoder(obs_sync)
         next_obs_sync = self.encoder(next_obs_sync)
-        grad_sync = self.critic_grad(obs_sync, action_sync, reward_sync, discount_sync, next_obs_sync, step)
+        critic_grad_sync = self.critic_grad(obs_sync, action_sync, reward_sync, discount_sync, next_obs_sync, step)
+        actor_grad_sync = self.actor_grad(obs_sync, step)
 
         obs, action, reward, discount, next_obs = utils.to_torch(batch, self.device)
         obs = self.aug(obs.float())
         next_obs = self.aug(next_obs.float())
         obs = self.encoder(obs)
         next_obs = self.encoder(next_obs)
-        grad_real = self.critic_grad(obs, action, reward, discount, next_obs, step)
+        critic_grad_real = self.critic_grad(obs, action, reward, discount, next_obs, step)
+        actor_grad_real = self.actor_grad(obs, step)
 
-        metrics = self.datasetDistillation.train(grad_real, grad_sync)
+        metrics = self.datasetDistillation.train(critic_grad_sync, actor_grad_sync, critic_grad_real, actor_grad_real)
         loss = metrics["DD_loss"]
         metrics = {"DD_loss": loss}
         return metrics
@@ -316,6 +312,18 @@ class DrQV2Agent:
         # critic_loss.backward()
         # grad = [p.grad for p in list(self.encoder.parameters())]
         # grad += [p.grad for p in list(self.critic.parameters())]
+        return grad
+
+    def actor_grad(self, obs, step):
+        stddev = utils.schedule(self.stddev_schedule, step)
+        dist = self.actor(obs, stddev)
+        action = dist.sample(clip=self.stddev_clip)
+        Q1, Q2 = self.critic(obs, action)
+        Q = torch.min(Q1, Q2)
+
+        actor_loss = -Q.mean()
+        self.actor_opt.zero_grad(set_to_none=True)
+        grad = torch.autograd.grad(actor_loss, list(self.actor.parameters()), create_graph=True)
         return grad
 
     def update_on_sync(self, step):

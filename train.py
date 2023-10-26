@@ -55,6 +55,7 @@ class Workspace:
         self.logger = Logger(self.work_dir, use_tb=self.cfg.use_tb)
         # create envs
         self.train_env = dmc.make(self.cfg.task_name, self.cfg.frame_stack,
+
                                   self.cfg.action_repeat, self.cfg.seed)
         self.eval_env = dmc.make(self.cfg.task_name, self.cfg.frame_stack,
                                  self.cfg.action_repeat, self.cfg.seed)

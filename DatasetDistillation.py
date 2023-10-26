@@ -86,22 +86,28 @@ class DatasetDistillation:
             batch[i] = batch[i][index]
         self.obs_ = torch.tensor(self.obs[self.index], dtype=torch.float, requires_grad=True, device=self.device)
         self.action_ = torch.tensor(self.action[self.index], dtype=torch.float, requires_grad=True, device=self.device)
-        self.reward_ = torch.tensor(self.reward[self.index], dtype=torch.float, requires_grad=True, device=self.device)
+        self.reward_ = torch.tensor(self.reward[self.index], dtype=torch.float, requires_grad=False, device=self.device)
         self.discount_ = torch.tensor(self.discount[self.index], dtype=torch.float, requires_grad=False, device=self.device)
         self.next_obs_ = torch.tensor(self.next_obs[self.index], dtype=torch.float, requires_grad=True, device=self.device)
 
-        self.opt = torch.optim.Adam([self.obs_, self.action_, self.reward_, self.next_obs_], lr=self.lr)
+        self.opt = torch.optim.Adam([self.obs_, self.action_, self.next_obs_], lr=self.lr)
 
         return self.obs_ * 255, self.action_, self.reward_, self.discount_, self.next_obs_ * 255
 
-    def train(self, grad_real, grad_sync):
-        for i in grad_real:
+    def train(self, critic_grad_sync, actor_grad_sync, critic_grad_real, actor_grad_real):
+        for i in critic_grad_real:
+            i.detach()
+        for i in actor_grad_real:
             i.detach()
         metrics = {}
-        loss = utils.match_loss(grad_sync, grad_real, self.device, "mse")
+        critic_loss = utils.match_loss(critic_grad_sync, critic_grad_real, self.device, "mse")
+        actor_loss = utils.match_loss(actor_grad_sync, actor_grad_real, self.device, "mse")
+        loss = critic_loss + actor_loss
         metrics['DD_loss'] = loss.item()
         self.opt.zero_grad()
+        # grad = [p.grad for p in [self.obs_, self.action_, self.reward_, self.discount_, self.next_obs_]]
         loss.backward()
+        # grad = [p.grad for p in [self.obs_, self.action_, self.reward_, self.discount_, self.next_obs_]]
         self.opt.step()
 
         self.obs[self.index] = self.obs_.detach().cpu().numpy()
