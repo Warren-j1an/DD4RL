@@ -136,6 +136,8 @@ class Workspace:
                                       self.cfg.action_repeat)
         eval_every_step = utils.Every(self.cfg.eval_every_frames,
                                       self.cfg.action_repeat)
+        img_every_step = utils.Every(self.cfg.eval_every_frames * 10,
+                                     self.cfg.action_repeat)
 
         episode_step, episode_reward = 0, 0
         time_step = self.train_env.reset()
@@ -177,6 +179,9 @@ class Workspace:
                                 self.global_frame)
                 self.eval()
 
+            if img_every_step(self.global_step):
+                self.datasetDistillation.save_img(self.global_step)
+
             # sample action
             with torch.no_grad(), utils.eval_mode(self.agent):
                 action = self.agent.act(time_step.observation,
@@ -198,11 +203,10 @@ class Workspace:
 
     def save_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
-        keys_to_save = ['agent', 'timer', '_global_step', '_global_episode']
+        keys_to_save = ['agent', 'datasetDistillation', 'timer', '_global_step', '_global_episode']
         payload = {k: self.__dict__[k] for k in keys_to_save}
         with snapshot.open('wb') as f:
             torch.save(payload, f)
-        self.datasetDistillation.save(self.work_dir)
 
     def load_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
@@ -210,7 +214,6 @@ class Workspace:
             payload = torch.load(f)
         for k, v in payload.items():
             self.__dict__[k] = v
-        self.datasetDistillation.load(self.work_dir)
 
 
 @hydra.main(config_path='cfgs', config_name='config')

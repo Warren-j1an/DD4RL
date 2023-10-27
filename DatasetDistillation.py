@@ -23,57 +23,23 @@ class DatasetDistillation:
         for _ in range(nstep):
             discount_ *= discount
 
-        # obs = np.random.rand(1000, *self.obs_spec.shape)
-        # action = np.random.rand(1000, *self.act_spec.shape)
-        # reward = np.linspace(0, 6, 1001)[:-1]  # action_repeat * nstep = 6
-        # discount = np.full(shape=(1000, 1), fill_value=self.discount)
-        # next_obs = np.random.rand(1000, *self.obs_spec.shape)
-        #
-        # obs = self.convert(obs, self.obs_spec.minimum, self.obs_spec.maximum)
-        # action = self.convert(action, self.act_spec.minimum, self.act_spec.maximum)
-        # next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
-        #
-        # self.obs = torch.tensor(obs, dtype=torch.float, requires_grad=False, device=self.device)
-        # self.action = torch.tensor(action, dtype=torch.float, requires_grad=False, device=self.device)
-        # self.reward = torch.tensor(reward, dtype=torch.float, requires_grad=False, device=self.device)
-        # self.discount = torch.tensor(discount, dtype=torch.float, requires_grad=False, device=self.device)
-        # self.next_obs = torch.tensor(next_obs, dtype=torch.float, requires_grad=False, device=self.device)
+        obs = np.random.rand(1000, *self.obs_spec.shape)
+        action = np.random.rand(1000, *self.act_spec.shape)
+        reward = np.linspace(0, 6, 1001)[:-1].reshape(-1, 1)  # action_repeat * nstep = 6
+        discount = np.full(shape=(1000, 1), fill_value=discount_)
+        next_obs = np.random.rand(1000, *self.obs_spec.shape)
 
-        self.obs = []
-        self.action = []
-        self.reward = []
-        self.discount = []
-        self.next_obs = []
-        for i in range(1000):
-            obs = np.random.rand(*self.obs_spec.shape)
-            action = np.random.rand(*self.act_spec.shape)
-            reward = np.array([np.linspace(0, 6, 1001)[i]])  # action_repeat * nstep = 6
-            discount = np.array([discount_])
-            next_obs = np.random.rand(*self.obs_spec.shape)
+        obs = self.convert(obs, self.obs_spec.minimum, self.obs_spec.maximum)
+        action = self.convert(action, self.act_spec.minimum, self.act_spec.maximum)
+        next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
 
-            obs = self.convert(obs, self.obs_spec.minimum, self.obs_spec.maximum)
-            action = self.convert(action, self.act_spec.minimum, self.act_spec.maximum)
-            next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
+        self.obs = torch.tensor(obs, dtype=torch.float, requires_grad=True, device=self.device)
+        self.action = torch.tensor(action, dtype=torch.float, requires_grad=True, device=self.device)
+        self.reward = torch.tensor(reward, dtype=torch.float, requires_grad=False, device=self.device)
+        self.discount = torch.tensor(discount, dtype=torch.float, requires_grad=False, device=self.device)
+        self.next_obs = torch.tensor(next_obs, dtype=torch.float, requires_grad=True, device=self.device)
 
-            self.obs.append(obs)
-            self.action.append(action)
-            self.reward.append(reward)
-            self.discount.append(discount)
-            self.next_obs.append(next_obs)
-
-        self.obs = np.array(self.obs)
-        self.action = np.array(self.action)
-        self.reward = np.array(self.reward)
-        self.discount = np.array(self.discount)
-        self.next_obs = np.array(self.next_obs)
-
-        self.obs_ = None
-        self.action_ = None
-        self.reward_ = None
-        self.discount_ = None
-        self.next_obs_ = None
-
-        self.opt = None
+        self.opt = torch.optim.Adam([self.obs, self.action, self.next_obs], lr=self.lr)
         self.index = None
 
     def get_data(self, batch):
@@ -84,15 +50,13 @@ class DatasetDistillation:
         self.index, index = np.unique(reward_.astype(int), return_index=True)
         for i in range(len(batch)):
             batch[i] = batch[i][index]
-        self.obs_ = torch.tensor(self.obs[self.index], dtype=torch.float, requires_grad=True, device=self.device)
-        self.action_ = torch.tensor(self.action[self.index], dtype=torch.float, requires_grad=True, device=self.device)
-        self.reward_ = torch.tensor(self.reward[self.index], dtype=torch.float, requires_grad=False, device=self.device)
-        self.discount_ = torch.tensor(self.discount[self.index], dtype=torch.float, requires_grad=False, device=self.device)
-        self.next_obs_ = torch.tensor(self.next_obs[self.index], dtype=torch.float, requires_grad=True, device=self.device)
+        obs_ = self.obs[self.index]
+        action_ = self.action[self.index]
+        reward_ = self.reward[self.index]
+        discount_ = self.discount[self.index]
+        next_obs_ = self.next_obs[self.index]
 
-        self.opt = torch.optim.Adam([self.obs_, self.action_, self.next_obs_], lr=self.lr)
-
-        return self.obs_ * 255, self.action_, self.reward_, self.discount_, self.next_obs_ * 255
+        return obs_ * 255, action_, reward_, discount_, next_obs_ * 255
 
     def train(self, critic_grad_sync, actor_grad_sync, critic_grad_real, actor_grad_real):
         for i in critic_grad_real:
@@ -105,23 +69,18 @@ class DatasetDistillation:
         loss = critic_loss + actor_loss
         metrics['DD_loss'] = loss.item()
         self.opt.zero_grad()
-        # grad = [p.grad for p in [self.obs_, self.action_, self.reward_, self.discount_, self.next_obs_]]
+        grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
         loss.backward()
-        # grad = [p.grad for p in [self.obs_, self.action_, self.reward_, self.discount_, self.next_obs_]]
+        grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
         self.opt.step()
-
-        self.obs[self.index] = self.obs_.detach().cpu().numpy()
-        self.action[self.index] = self.action_.detach().cpu().numpy()
-        self.reward[self.index] = self.reward_.detach().cpu().numpy()
-        self.next_obs[self.index] = self.next_obs_.detach().cpu().numpy()
 
         return metrics
 
-    def save_img(self):
-        img = np.clip(255 * self.obs, 0, 255).astype(np.uint8)
-        reward = self.reward
-        img_n = np.clip(255 * self.next_obs, 0, 255).astype(np.uint8)
-        path = pathlib.Path.cwd().parent.parent / 'sync_obs'
+    def save_img(self, global_step):
+        img = np.clip(255 * self.obs.cpu().detach().numpy(), 0, 255).astype(np.uint8)
+        reward = self.reward.cpu().detach().numpy()
+        img_n = np.clip(255 * self.next_obs.cpu().detach().numpy(), 0, 255).astype(np.uint8)
+        path = pathlib.Path.cwd() / f'sync_obs/{global_step}'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         wb = Workbook()
         ws = wb.active
@@ -137,22 +96,6 @@ class DatasetDistillation:
             ws.add_image(obs_next, f'C{i + 1}')
         wb.save(os.path.abspath(path) + f'/sync_data.xlsx')
         print(pathlib.Path.cwd().parent.parent / 'sync_obs')
-
-    def save(self, path):
-        path = str(path)
-        np.save(path + "/obs.npy", self.obs)
-        np.save(path + "/action.npy", self.action)
-        np.save(path + "/reward.npy", self.reward)
-        np.save(path + "/discount.npy", self.discount)
-        np.save(path + "/next_obs.npy", self.next_obs)
-
-    def load(self, path):
-        path = str(path)
-        self.obs = np.load(path + "/obs.npy")
-        self.action = np.load(path + "/action.npy")
-        self.reward = np.load(path + "/reward.npy")
-        self.discount = np.load(path + "/discount.npy")
-        self.next_obs = np.load(path + "/next_obs.npy")
 
     def convert(self, data, min, max):
         data = data * (max - min) + min
