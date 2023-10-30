@@ -95,7 +95,7 @@ class DatasetDistillation:
             ws.add_image(obs, f'A{i + 1}')
             ws[f'B{i + 1}'] = reward[i][0]
             ws.add_image(obs_next, f'C{i + 1}')
-        wb.save(os.path.abspath(path) + f'/sync_data.xlsx')
+        wb.save(os.path.abspath(path) + f'/sync_data_{global_step}.xlsx')
         for i in range(1000):
             obs = pathlib.Path(os.path.abspath(path) + f'/img_{i}.png')
             obs_next = pathlib.Path(os.path.abspath(path) + f'/img_next_{i}.png')
