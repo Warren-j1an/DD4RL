@@ -43,6 +43,7 @@ class DatasetDistillation:
         self.opt_obs = torch.optim.Adam([self.obs, self.next_obs], lr=self.lr_obs)
         self.opt_action = torch.optim.Adam([self.action], lr=self.lr_action)
         self.index = None
+        self.statistic = collections.defaultdict(int)
 
     def get_data(self, batch):
         reward_ = batch[2].numpy()
@@ -75,6 +76,9 @@ class DatasetDistillation:
         self.opt_obs.step()
         self.opt_action.step()
 
+        for i in range(1000):
+            self.statistic[f'reward_{i}'] += np.sum(self.index == i)
+
         return metrics
 
     def save_img(self, global_step):
@@ -94,13 +98,14 @@ class DatasetDistillation:
             obs_next = Image(os.path.abspath(path) + f'/img_next_{i}.png')
             ws.add_image(obs, f'A{i + 1}')
             ws[f'B{i + 1}'] = reward[i][0]
+            ws[f'D{i + 1}'] = self.statistic[f'reward_{i}']
             ws.add_image(obs_next, f'C{i + 1}')
         wb.save(os.path.abspath(path) + f'/sync_data_{global_step}.xlsx')
-        for i in range(1000):
-            obs = pathlib.Path(os.path.abspath(path) + f'/img_{i}.png')
-            obs_next = pathlib.Path(os.path.abspath(path) + f'/img_next_{i}.png')
-            obs.unlink()
-            obs_next.unlink()
+        # for i in range(1000):
+        #     obs = pathlib.Path(os.path.abspath(path) + f'/img_{i}.png')
+        #     obs_next = pathlib.Path(os.path.abspath(path) + f'/img_next_{i}.png')
+        #     obs.unlink()
+        #     obs_next.unlink()
 
     def convert(self, data, min, max):
         data = data * (max - min) + min

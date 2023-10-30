@@ -216,7 +216,7 @@ def main(cfg):
     if snapshot.exists():
         print(f'resuming: {snapshot}')
         workspace.load_snapshot(snapshot)
-    # workspace.train()
+    workspace.train()
 
 
 if __name__ == '__main__':
