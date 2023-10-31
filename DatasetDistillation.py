@@ -1,6 +1,6 @@
 import collections
-
 import torch
+import torch.nn.functional as F
 import utils
 import pathlib
 import numpy as np
@@ -30,10 +30,6 @@ class DatasetDistillation:
         discount = np.full(shape=(1000, 1), fill_value=discount_)
         next_obs = np.random.rand(1000, *self.obs_spec.shape)
 
-        obs = self.convert(obs, self.obs_spec.minimum, self.obs_spec.maximum)
-        action = self.convert(action, self.act_spec.minimum, self.act_spec.maximum)
-        next_obs = self.convert(next_obs, self.obs_spec.minimum, self.obs_spec.maximum)
-
         self.obs = torch.tensor(obs, dtype=torch.float, requires_grad=True, device=self.device)
         self.action = torch.tensor(action, dtype=torch.float, requires_grad=True, device=self.device)
         self.reward = torch.tensor(reward, dtype=torch.float, requires_grad=False, device=self.device)
@@ -44,6 +40,7 @@ class DatasetDistillation:
         self.opt_action = torch.optim.Adam([self.action], lr=self.lr_action)
         self.index = None
         self.statistic = collections.defaultdict(int)
+        self.grad = collections.defaultdict(int)
 
     def get_data(self, batch):
         reward_ = batch[2].numpy()
@@ -56,7 +53,7 @@ class DatasetDistillation:
         discount_ = self.discount[self.index]
         next_obs_ = self.next_obs[self.index]
 
-        return obs_, action_, reward_, discount_, next_obs_
+        return self.convert(obs_, action_, reward_, discount_, next_obs_)
 
     def train(self, critic_grad_sync, actor_grad_sync, critic_grad_real, actor_grad_real):
         for i in critic_grad_real:
@@ -70,9 +67,11 @@ class DatasetDistillation:
         metrics['DD_loss'] = loss.item()
         self.opt_obs.zero_grad(set_to_none=True)
         self.opt_action.zero_grad(set_to_none=True)
-        # grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
         loss.backward()
-        # grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
+        grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
+        for i in range(1000):
+            self.grad[i] += (torch.sum(grad[0][i]).cpu().numpy() /
+                             (grad[0][i].shape[0] * grad[0][i].shape[1] * grad[0][i].shape[2]))
         self.opt_obs.step()
         self.opt_action.step()
 
@@ -82,9 +81,9 @@ class DatasetDistillation:
         return metrics
 
     def save_img(self, global_step):
-        img = np.clip(self.obs.cpu().detach().numpy(), 0, 255).astype(np.uint8)
+        img = np.clip(self.obs.cpu().detach().numpy() * 255, 0, 255).astype(np.uint8)
         reward = self.reward.cpu().detach().numpy()
-        img_n = np.clip(self.next_obs.cpu().detach().numpy(), 0, 255).astype(np.uint8)
+        img_n = np.clip(self.next_obs.cpu().detach().numpy() * 255, 0, 255).astype(np.uint8)
         path = pathlib.Path.cwd() / f'sync_obs/{global_step}'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         wb = Workbook()
@@ -98,15 +97,25 @@ class DatasetDistillation:
             obs_next = Image(os.path.abspath(path) + f'/img_next_{i}.png')
             ws.add_image(obs, f'A{i + 1}')
             ws[f'B{i + 1}'] = reward[i][0]
-            ws[f'D{i + 1}'] = self.statistic[f'reward_{i}']
             ws.add_image(obs_next, f'C{i + 1}')
+            ws[f'D{i + 1}'] = self.statistic[f'reward_{i}']
+            ws[f'E{i + 1}'] = self.grad[i] / global_step if global_step != 0 else self.grad[i]
         wb.save(os.path.abspath(path) + f'/sync_data_{global_step}.xlsx')
-        # for i in range(1000):
-        #     obs = pathlib.Path(os.path.abspath(path) + f'/img_{i}.png')
-        #     obs_next = pathlib.Path(os.path.abspath(path) + f'/img_next_{i}.png')
-        #     obs.unlink()
-        #     obs_next.unlink()
+        for i in range(1000):
+            obs = pathlib.Path(os.path.abspath(path) + f'/img_{i}.png')
+            obs_next = pathlib.Path(os.path.abspath(path) + f'/img_next_{i}.png')
+            obs.unlink()
+            obs_next.unlink()
 
-    def convert(self, data, min, max):
-        data = data * (max - min) + min
-        return data
+    def convert(self, obs, action, reward, discount, next_obs):
+        obs_ = F.normalize(obs, p=2, dim=1)
+        action_ = F.normalize(action, p=2, dim=1)
+        obs_next_ = F.normalize(next_obs, p=2, dim=1)
+
+        obs_min = torch.tensor(self.obs_spec.minimum, device=self.device)
+        obs_max = torch.tensor(self.obs_spec.maximum, device=self.device)
+        action_min = torch.tensor(self.act_spec.minimum, device=self.device)
+        action_max = torch.tensor(self.act_spec.maximum, device=self.device)
+        return (obs_ * (obs_max - obs_min) + obs_min,
+                action_ * (action_max - action_min) + action_min, reward, discount,
+                obs_next_ * (obs_max - obs_min) + obs_min)
