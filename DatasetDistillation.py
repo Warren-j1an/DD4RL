@@ -69,7 +69,7 @@ class DatasetDistillation:
         self.opt_obs.zero_grad(set_to_none=True)
         self.opt_action.zero_grad(set_to_none=True)
         loss.backward()
-        grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
+        # grad = [p.grad for p in [self.obs, self.action, self.reward, self.discount, self.next_obs]]
         self.opt_obs.step()
         self.opt_action.step()
 
