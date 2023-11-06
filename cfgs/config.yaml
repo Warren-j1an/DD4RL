@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - task@_global_: finger_spin  # quadruped_walk
+  - task@_global_: finger_spin  # quadruped_walk (walker quadruped)
   - override hydra/launcher: submitit_local
 
 # task settings
@@ -48,8 +48,8 @@ agent:
 
 DD:
   batch: 256
-  lr_obs: 1e-4
-  lr_action: 1e-5
+  lr_obs: 1e-2
+  lr_action: 1e-4
   device: ${device}
 
 hydra:

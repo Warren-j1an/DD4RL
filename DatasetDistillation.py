@@ -64,7 +64,7 @@ class DatasetDistillation:
         metrics = {}
         critic_loss = utils.match_loss(critic_grad_sync, critic_grad_real, self.device, "mse")
         actor_loss = utils.match_loss(actor_grad_sync, actor_grad_real, self.device, "mse")
-        loss = critic_loss + actor_loss
+        loss = critic_loss + actor_loss  # param to actor
         metrics['DD_loss'] = loss.item()
         self.opt_obs.zero_grad(set_to_none=True)
         self.opt_action.zero_grad(set_to_none=True)
