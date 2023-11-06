@@ -2,6 +2,7 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import copy
 import DatasetDistillation
 import hydra
 import numpy as np
@@ -271,8 +272,7 @@ class DrQV2Agent:
 
         return metrics
 
-    def update_datasetDistillation(self, batch_, step):
-        batch = batch_.copy()
+    def update_datasetDistillation(self, batch, step):
         # sync grad
         obs_sync, action_sync, reward_sync, discount_sync, next_obs_sync = self.datasetDistillation.get_data(batch)
         obs_sync = self.aug(obs_sync.float())
