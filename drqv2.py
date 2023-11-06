@@ -244,8 +244,8 @@ class DrQV2Agent:
 
         metrics.update(self.update_datasetDistillation(batch, step))
 
-        obs, action, reward, discount, next_obs = utils.to_torch(
-            batch, self.device)
+        # obs, action, reward, discount, next_obs = utils.to_torch(batch, self.device)
+        obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch)
 
         # augment
         obs = self.aug(obs.float())
