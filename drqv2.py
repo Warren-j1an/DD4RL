@@ -237,12 +237,12 @@ class DrQV2Agent:
     def update(self, replay_iter, step):
         metrics = dict()
 
-        if step % self.update_every_steps != 0:
-            return metrics
-
         batch = next(replay_iter)
 
         metrics.update(self.update_datasetDistillation(batch, step))
+
+        if step % self.update_every_steps != 0:
+            return metrics
 
         # obs, action, reward, discount, next_obs = utils.to_torch(batch, self.device)
         obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch, False)
