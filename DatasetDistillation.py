@@ -43,11 +43,12 @@ class DatasetDistillation:
         self.index = None
         self.statistic = collections.defaultdict(int)
 
-    def get_data(self, batch):
-        reward_ = batch[2].numpy()
-        self.index = reward_.reshape(-1)
-        for i in range(len(self.index)):
-            self.index[i] = np.floor(self.index[i] / 0.006) if self.index[i] != 6.0 else 999  # 6 for reward[5.994]
+    def get_data(self, batch, index=True):
+        if index:
+            reward_ = batch[2].numpy()
+            self.index = reward_.reshape(-1)
+            for i in range(len(self.index)):
+                self.index[i] = np.floor(self.index[i] / 0.006) if self.index[i] != 6.0 else 999  # 6 for reward[5.994]
         obs_ = self.obs[self.index]
         action_ = self.action[self.index]
         reward_ = self.reward[self.index]

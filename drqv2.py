@@ -245,7 +245,7 @@ class DrQV2Agent:
         metrics.update(self.update_datasetDistillation(batch, step))
 
         # obs, action, reward, discount, next_obs = utils.to_torch(batch, self.device)
-        obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch)
+        obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch, False)
 
         # augment
         obs = self.aug(obs.float())
@@ -271,8 +271,7 @@ class DrQV2Agent:
 
         return metrics
 
-    def update_datasetDistillation(self, batch_, step):
-        batch = batch_.copy()
+    def update_datasetDistillation(self, batch, step):
         # sync grad
         obs_sync, action_sync, reward_sync, discount_sync, next_obs_sync = self.datasetDistillation.get_data(batch)
         obs_sync = self.aug(obs_sync.float())
