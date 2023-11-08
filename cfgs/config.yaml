@@ -47,7 +47,7 @@ agent:
   stddev_clip: 0.3
 
 DD:
-  batch: 256
+  batch: 1000
   lr_obs: 1e-2
   lr_action: 1e-3
   device: ${device}

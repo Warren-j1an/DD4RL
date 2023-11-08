@@ -244,8 +244,9 @@ class DrQV2Agent:
         if step % self.update_every_steps != 0:
             return metrics
 
-        # obs, action, reward, discount, next_obs = utils.to_torch(batch, self.device)
-        obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch, False)
+        with torch.no_grad():
+            # obs, action, reward, discount, next_obs = utils.to_torch(batch, self.device)
+            obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch, False)
 
         # augment
         obs = self.aug(obs.float())

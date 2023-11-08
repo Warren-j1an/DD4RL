@@ -24,11 +24,11 @@ class DatasetDistillation:
         for _ in range(nstep):
             discount_ *= discount
 
-        self.init_obs = np.random.rand(1000, *self.obs_spec.shape)
-        self.init_action = np.random.rand(1000, *self.act_spec.shape)
-        self.init_reward = np.linspace(0, 6, 1001)[:-1].reshape(-1, 1)  # action_repeat * nstep = 6
-        self.init_discount = np.full(shape=(1000, 1), fill_value=discount_)
-        self.init_next_obs = np.random.rand(1000, *self.obs_spec.shape)
+        self.init_obs = np.random.rand(self.batch, *self.obs_spec.shape)
+        self.init_action = np.random.rand(self.batch, *self.act_spec.shape)
+        self.init_reward = np.linspace(0, 6, self.batch + 1)[:-1].reshape(-1, 1)  # action_repeat * nstep = 6
+        self.init_discount = np.full(shape=(self.batch, 1), fill_value=discount_)
+        self.init_next_obs = np.random.rand(self.batch, *self.obs_spec.shape)
 
         self.obs = torch.tensor(self.init_obs, dtype=torch.float, requires_grad=True, device=self.device)
         self.action = torch.tensor(self.init_action, dtype=torch.float, requires_grad=True, device=self.device)
@@ -48,7 +48,7 @@ class DatasetDistillation:
             reward_ = batch[2].numpy().copy()
             self.index = reward_.reshape(-1)
             for i in range(len(self.index)):
-                self.index[i] = np.floor(self.index[i] / 0.006) if self.index[i] != 6.0 else 999  # 6 for reward[5.994]
+                self.index[i] = np.floor(self.index[i] / 6 * self.batch) if self.index[i] != 6.0 else self.batch - 1  # 6 for reward[5.994]
         obs_ = self.obs[self.index]
         action_ = self.action[self.index]
         reward_ = self.reward[self.index]
@@ -74,7 +74,7 @@ class DatasetDistillation:
         self.opt_obs.step()
         self.opt_action.step()
 
-        for i in range(1000):
+        for i in range(self.batch):
             self.statistic[f'reward_{i}'] += np.sum(self.index == i)
 
         return metrics
@@ -88,7 +88,7 @@ class DatasetDistillation:
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         wb = Workbook()
         ws = wb.active
-        for i in range(1000):
+        for i in range(self.batch):
             o = np.transpose(img[i], (1, 2, 0))[:, :, 6:]
             o_n = np.transpose(img_n[i], (1, 2, 0))[:, :, 6:]
             cv2.imwrite(os.path.abspath(path) + f'/img_{i}.png', o)
@@ -102,7 +102,7 @@ class DatasetDistillation:
             ws[f'E{i + 1}'] = np.sum(obs_log[i] - self.init_obs[i]) * 255
             ws[f'F{i + 1}'] = np.sum((obs_log[i] - self.init_obs[i]) != 0)
         wb.save(os.path.abspath(path) + f'/sync_data_{global_step}.xlsx')
-        # for i in range(1000):
+        # for i in range(self.batch):
         #     obs = pathlib.Path(os.path.abspath(path) + f'/img_{i}.png')
         #     obs_next = pathlib.Path(os.path.abspath(path) + f'/img_next_{i}.png')
         #     obs.unlink()
