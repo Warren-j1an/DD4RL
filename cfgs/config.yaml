@@ -48,7 +48,7 @@ agent:
 
 DD:
   batch: 1000
-  lr_obs: 1e-2
+  lr_obs: 1e-3
   lr_action: 1e-4
   device: ${device}
 
