@@ -2,9 +2,7 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-import DatasetDistillation
-import hydra
-import numpy as np
+import collections
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -154,7 +152,7 @@ class DrQV2Agent:
         self.aug = RandomShiftsAug(pad=4)
 
         self.datasetDistillation = None
-        self.dd_update_num = 1
+        self.dd_update_num = 10
 
         self.train()
         self.critic_target.train()
@@ -235,18 +233,25 @@ class DrQV2Agent:
         return metrics
 
     def update(self, replay_iter, step):
-        metrics = dict()
+        metrics = collections.defaultdict(float)
 
         batch = next(replay_iter)
+        batch_ = batch
 
-        metrics.update(self.update_datasetDistillation(batch, step))
+        for num in range(self.dd_update_num):
+            metrics_sync = self.update_datasetDistillation(batch_, step)
+            for k, v in metrics_sync.items():
+                metrics[k] += v
+                if num == self.dd_update_num - 1:
+                    metrics[k] /= self.dd_update_num
+            batch_ = next(replay_iter)
 
         if step % self.update_every_steps != 0:
             return metrics
 
         with torch.no_grad():
             # obs, action, reward, discount, next_obs = utils.to_torch(batch, self.device)
-            obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch, False)
+            obs, action, reward, discount, next_obs = self.datasetDistillation.get_data(batch)
 
         # augment
         obs = self.aug(obs.float())

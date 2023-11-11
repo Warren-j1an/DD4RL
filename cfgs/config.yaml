@@ -15,7 +15,7 @@ num_eval_episodes: 10
 # snapshot
 save_snapshot: true
 # replay buffer
-replay_buffer_size: 500000 # 800000
+replay_buffer_size: 600000 # 800000
 replay_buffer_num_workers: 4
 nstep: 3
 batch_size: 256
@@ -38,7 +38,7 @@ agent:
   device: ${device}
   lr: ${lr}
   critic_target_tau: 0.01
-  update_every_steps: 20 # 2
+  update_every_steps: 2
   use_tb: ${use_tb}
   num_expl_steps: 2000
   hidden_dim: 1024
@@ -48,7 +48,7 @@ agent:
 
 DD:
   batch: 1000
-  lr_obs: 1e-2
+  lr_obs: 1e-3
   lr_action: 1e-3
   device: ${device}
 
